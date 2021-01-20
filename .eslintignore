@@ -1,0 +1,9 @@
+/lib/**
+/test/**
+/node_modules/**
+/bin/**
+/example/**
+/typings/**
+commitlint.config.js
+jest.config.js
+

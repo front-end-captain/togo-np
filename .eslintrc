@@ -1,0 +1,33 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": { "project": ["./tsconfig.json"] },
+  "extends": [
+    "eslint:recommended",
+    "plugin:import/errors",
+    "plugin:import/warnings",
+    "plugin:import/typescript",
+    "node",
+    "prettier"
+  ],
+  "env": { "es2017": true, "node": true },
+  "globals": {
+    "describe": true,
+    "test": true,
+    "it": true,
+    "expect": true,
+    "beforeAll": true,
+    "afterAll": true,
+    "afterEach": true,
+    "beforeEach": true,
+    "jest": true
+  },
+  "rules": {
+    "import/prefer-default-export": "off",
+    "no-sync": "off",
+    "no-unused-vars": "off",
+    "no-unused-expressions": "off",
+    "no-process-exit": "off",
+    "class-methods-use-this": "off"
+  }
+}
