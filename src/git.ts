@@ -1,28 +1,147 @@
 /* eslint-disable no-empty */
 import execa from "execa";
 import ignoreWalker from "ignore-walk";
-import path from "path";
-import findUp from "find-up";
+import githubUrlFromGit from "github-url-from-git";
+import { BasePkgFields, CliOptions } from "./definitions";
+import terminalLink from "terminal-link";
+import issueRegex from "issue-regex";
 
-function pkgDir(cwd?: string) {
-  const filePath = findUp.sync("package.json", { cwd });
-  return filePath && path.dirname(filePath);
+import { pkgDir } from "./pkg";
+import { Npm } from "./npm";
+import { error, info } from "@luban-cli/cli-shared-utils";
+
+function linkifyIssues(url: string, message: string) {
+  if (!(url && terminalLink.isSupported)) {
+    return message;
+  }
+
+  return message.replace(issueRegex(), (issue) => {
+    const issuePart = issue.replace("#", "/issues/");
+
+    if (issue.startsWith("#")) {
+      return terminalLink(issue, `${url}${issuePart}`);
+    }
+
+    return terminalLink(issue, `https://github.com/${issuePart}`);
+  });
+}
+
+function linkifyCommit(url: string, commit: string) {
+  if (!(url && terminalLink.isSupported)) {
+    return commit;
+  }
+
+  return terminalLink(commit, `${url}/commit/${commit}`);
+}
+
+function linkifyCommitRange(url: string, commitRange: string) {
+  if (!(url && terminalLink.isSupported)) {
+    return commitRange;
+  }
+
+  return terminalLink(commitRange, `${url}/compare/${commitRange}`);
 }
 
 class Git {
+  private options: CliOptions;
+  private repoUrl: string | undefined;
+  private pkg: BasePkgFields;
+
+  constructor(options: CliOptions, pkg: BasePkgFields) {
+    this.options = options;
+
+    this.pkg = pkg;
+
+    this.repoUrl =
+      this.pkg.repository &&
+      githubUrlFromGit(this.pkg.repository.url, {
+        extraBaseUrls: ["gitlab.com"],
+      });
+  }
+
+  public async prepare() {
+    if (this.repoUrl) {
+      const registryUrl = await Npm.getRegistryUrl(this.pkg);
+
+      const defaultBranch = await Git.getDefaultBranch();
+
+      const hasCommits = await Git.printCommitLog(
+        this.repoUrl,
+        registryUrl,
+        this.options.branch || defaultBranch,
+      );
+
+      if (!hasCommits) {
+        error("No commits found since previous release, exit");
+        process.exit(1);
+      }
+    }
+
+    // TODO
+    // 1 检查Git版本是否符合package运行要求
+    // 2.检查Git远端是否可以用
+    // 3.获取新的Git tag
+    // 4.检查新的的Git tag 在远端仓库是否存在
+    // 5.检查是否有未拉去的更新(远端和本地是否同步)
+    // 6.检查发布分支是否在远端仓库存在
+    // 7.工作空间是否干净
+    // 8.指定的分支或者当前分支是否是允许发布的分支(if allowAnyBranch = false)
+  }
+
+  static async printCommitLog(
+    repoUrl: string,
+    registryUrl: string,
+    releaseBranch: string,
+  ) {
+    const revision = await Git.getLatestTagOrFirstCommitID();
+
+    if (!revision) {
+      error("The package has not been published yet.");
+      process.exit(1);
+    }
+
+    const log = await Git.commitLogFromRevision(revision);
+
+    if (!log) {
+      return false;
+    }
+
+    const commitRangeText = `${revision}...${releaseBranch}`;
+
+    const commits = log.split("\n").map((commit) => {
+      const splitIndex = commit.lastIndexOf(" ");
+      return {
+        message: commit.slice(0, splitIndex),
+        id: commit.slice(splitIndex + 1),
+      };
+    });
+
+    const history = commits
+      .map((commit) => {
+        const commitMessage = linkifyIssues(repoUrl, commit.message);
+        const commitId = linkifyCommit(repoUrl, commit.id);
+        return `${commitMessage}  ${commitId}`;
+      })
+      .join("\n");
+
+    const commitRange = linkifyCommitRange(repoUrl, commitRangeText);
+
+    console.log("\n");
+    info(history, "Commits");
+    info(commitRange, "Commit Range");
+    info(registryUrl, "Registry");
+    console.log("");
+
+    return true;
+  }
+
   static git(args: readonly string[], options?: execa.Options) {
     return execa("git", args, options);
   }
 
   static async getLatestTag() {
-    let latestTag = "";
-
-    try {
-      const { stdout } = await Git.git(["describe", "--abbrev=0", "--tags"]);
-      latestTag = stdout;
-    } catch (ignoreError) {}
-
-    return latestTag;
+    const { stdout } = await Git.git(["describe", "--abbrev=0", "--tags"]);
+    return stdout;
   }
 
   static async getPrevTag() {
@@ -77,6 +196,60 @@ class Git {
       firstCommitID = stdout;
     } catch (ignoreError) {}
     return firstCommitID;
+  }
+
+  static async getLatestTagOrFirstCommitID() {
+    let latest = "";
+
+    try {
+      latest = await Git.getLatestTag();
+    } catch (ignoreError) {
+      latest = await Git.getFirstCommitID();
+    }
+
+    return latest;
+  }
+
+  static async commitLogFromRevision(revision: string) {
+    let log = "";
+
+    try {
+      const { stdout } = await Git.git([
+        "log",
+        "--format=%s %h",
+        `${revision}..HEAD`,
+      ]);
+      log = stdout;
+    } catch (ignoreError) {}
+
+    return log;
+  }
+
+  static async getDefaultBranch() {
+    for (const branch of ["main", "master", "gh-pages"]) {
+      if (await Git.hasLocalBranch(branch)) {
+        return branch;
+      }
+    }
+
+    error(
+      "Could not infer the default Git branch. Please specify one with the --branch flag or with a np config.",
+    );
+    process.exit(1);
+  }
+
+  static async hasLocalBranch(branch: string) {
+    try {
+      await Git.git([
+        "show-ref",
+        "--verify",
+        "--quiet",
+        `refs/heads/${branch}`,
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

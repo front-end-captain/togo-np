@@ -1,14 +1,9 @@
 import { Command, Option } from "commander";
 import dedent from "dedent";
 import { log } from "@luban-cli/cli-shared-utils";
-// import chalk from "chalk";
-// import inquirer from "inquirer";
-// import fs from "fs-extra";
-// import path from "path";
-
 import { CliOptions } from "./definitions";
-import { Version } from "./version";
-import { Service } from "./service";
+
+import { run } from "./run";
 
 function camelize(str: string): string {
   return str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : ""));
@@ -46,9 +41,7 @@ program
   .action((inputVersion: undefined | string, cmd: Command) => {
     const options = prepareInitOptions<CliOptions>(cmd);
 
-    const version = new Version(inputVersion || "", options);
-
-    new Service(version, options).run();
+    run(inputVersion, options);
   });
 
 program.on("--help", () => {
