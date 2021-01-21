@@ -9,6 +9,7 @@ import issueRegex from "issue-regex";
 import { pkgDir } from "./pkg";
 import { Npm } from "./npm";
 import { error, info } from "@luban-cli/cli-shared-utils";
+import { Version } from "./version";
 
 function linkifyIssues(url: string, message: string) {
   if (!(url && terminalLink.isSupported)) {
@@ -46,11 +47,14 @@ class Git {
   private options: CliOptions;
   private repoUrl: string | undefined;
   private pkg: BasePkgFields;
+  private version: Version;
 
-  constructor(options: CliOptions, pkg: BasePkgFields) {
+  constructor(options: CliOptions, pkg: BasePkgFields, version: Version) {
     this.options = options;
 
     this.pkg = pkg;
+
+    this.version = version;
 
     this.repoUrl =
       this.pkg.repository &&
@@ -82,6 +86,9 @@ class Git {
     // 2.检查Git远端是否可以用
     // 3.获取新的Git tag
     // 4.检查新的的Git tag 在远端仓库是否存在
+
+    await this.checkGitTagExistence();
+
     // 5.检查是否有未拉去的更新(远端和本地是否同步)
     // 6.检查发布分支是否在远端仓库存在
     // 7.工作空间是否干净
@@ -110,6 +117,7 @@ class Git {
 
     const commits = log.split("\n").map((commit) => {
       const splitIndex = commit.lastIndexOf(" ");
+
       return {
         message: commit.slice(0, splitIndex),
         id: commit.slice(splitIndex + 1),
@@ -117,10 +125,11 @@ class Git {
     });
 
     const history = commits
-      .map((commit) => {
+      .map((commit, index) => {
         const commitMessage = linkifyIssues(repoUrl, commit.message);
         const commitId = linkifyCommit(repoUrl, commit.id);
-        return `${commitMessage}  ${commitId}`;
+        const indent = index === 0 ? "" : "                ";
+        return `${indent}${commitMessage}  ${commitId}`;
       })
       .join("\n");
 
@@ -250,6 +259,78 @@ class Git {
     } catch {
       return false;
     }
+  }
+
+  static async getVersion() {
+    const { stdout } = await Git.git(["version"]);
+
+    const match = /git version (?<version>\d+\.\d+\.\d+).*/.exec(stdout);
+
+    return match && match.groups?.version;
+  }
+
+  static async verifyRemoteIsValid() {
+    try {
+      await Git.git(["ls-remote", "origin", "HEAD"]);
+    } catch (error) {
+      error(error.stderr.replace("fatal:", "Git fatal error:"));
+      process.exit(1);
+    }
+  }
+
+  static async verifyGitVersion(pkg: BasePkgFields) {
+    const gitVersion = await Git.getVersion();
+    if (gitVersion) {
+      Version.verifyRequirementSatisfied("npm", gitVersion, pkg);
+    }
+  }
+
+  static async fetch() {
+    await Git.git(["fetch"]);
+  }
+
+  static async verifyTagDoesNotExistOnRemote(tagName: string) {
+    if (await Git.tagExistsOnRemote(tagName)) {
+      error(`Git tag \`${tagName}\` already exists.`);
+
+      process.exit(1);
+    }
+  }
+
+  static async tagExistsOnRemote(tagName: string) {
+    try {
+      const { stdout: revInfo } = await Git.git([
+        "rev-parse",
+        "--quiet",
+        "--verify",
+        `refs/tags/${tagName}`,
+      ]);
+
+      if (revInfo) {
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      // Command fails with code 1 and no output if the tag does not exist, even though `--quiet` is provided
+      // https://github.com/sindresorhus/np/pull/73#discussion_r72385685
+      if (err.stdout === "" && err.stderr === "") {
+        return false;
+      }
+
+      error(err);
+      process.exit(1);
+    }
+  }
+
+  private async checkGitTagExistence() {
+    await Git.fetch();
+
+    const tagPrefix = await Npm.getTagVersionPrefix();
+
+    await Git.verifyTagDoesNotExistOnRemote(
+      `${tagPrefix}${this.version.getNewVersion()}`,
+    );
   }
 }
 

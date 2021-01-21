@@ -17,13 +17,13 @@ export async function run(
   const version = new Version(inputVersion || "");
   await version.prepare();
 
-  spin.logWithSpinner(`${chalk.bgGreen("Prepare")} npm...`);
+  spin.logWithSpinner(`${chalk.bgGreen("Prepare")} npm... `);
   const npm = new Npm(version, options, pkg);
   await npm.prepare();
   spin.stopSpinner();
 
-  spin.logWithSpinner(`${chalk.bgGreen("Prepare")} git...`);
-  const git = new Git(options, pkg);
+  spin.logWithSpinner(`${chalk.bgGreen("Prepare")} git... `);
+  const git = new Git(options, pkg, version);
   await git.prepare();
   spin.stopSpinner();
 }

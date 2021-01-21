@@ -1,7 +1,12 @@
 import { error } from "@luban-cli/cli-shared-utils";
 import execa from "execa";
 import pTimeout from "p-timeout";
+import validatePkgName from "validate-npm-package-name";
+import chalk from "chalk";
+import pMemoize from "p-memoize";
+
 import { BasePkgFields, CliOptions } from "./definitions";
+
 import { Version } from "./version";
 
 class Npm {
@@ -26,14 +31,13 @@ class Npm {
       }
     }
 
+    Npm.isPackageNameAvailable(this.pkg);
+
     await Npm.checkConnection();
 
-    await Npm.verifyRecentNpmVersion(this.pkg);
+    await Npm.verifyNpmVersion(this.pkg);
 
-    // TODO
-    // 1. 检查 npm 服务连接情况
-    // 2. 检查 npm 版本是否符合package运行要求
-    // 3. 检查用户是否是 package的collaborator且具有写权限
+    await this.verifyUserIsAuthenticated();
   }
 
   static npm(args: readonly string[], options?: execa.Options) {
@@ -43,9 +47,10 @@ class Npm {
   static async getRegistryUrl(pkg: BasePkgFields) {
     const args = ["config", "get", "registry"];
 
-    if (Npm.isExternalRegistry(pkg)) {
+    const registry = Npm.getPackageJsonRegistry(pkg);
+    if (registry) {
       args.push("--registry");
-      args.push(pkg.publishConfig?.registry as string);
+      args.push(registry);
     }
 
     const { stdout } = await Npm.npm(args);
@@ -59,18 +64,32 @@ class Npm {
     );
   }
 
+  static getPackageJsonRegistry(pkg: BasePkgFields) {
+    if (Npm.isExternalRegistry(pkg)) {
+      return pkg.publishConfig?.registry as string;
+    }
+
+    return undefined;
+  }
+
   static async checkConnection() {
+    const configRegistry = await Npm.getConfigRegistry();
+    const errMsg = `Connection to npm registry(${chalk.yellow(
+      configRegistry,
+    )}) failed`;
+
     await pTimeout(
       (async () => {
         try {
           await Npm.npm(["ping"]);
           return true;
         } catch {
-          throw new Error("Connection to npm registry failed");
+          error(errMsg);
+          process.exit(1);
         }
       })(),
       15000,
-      "Connection to npm registry timed out",
+      errMsg,
     );
   }
 
@@ -79,13 +98,13 @@ class Npm {
     return stdout;
   }
 
-  static async verifyRecentNpmVersion(pkg: BasePkgFields) {
+  static async verifyNpmVersion(pkg: BasePkgFields) {
     const npmVersion = await Npm.getVersion();
 
     Version.verifyRequirementSatisfied("npm", npmVersion, pkg);
   }
 
-  static async username(externalRegistry: string) {
+  static async username(externalRegistry?: string) {
     const args = ["whoami"];
 
     if (externalRegistry) {
@@ -107,9 +126,10 @@ class Npm {
 
   static async collaborators(pkg: BasePkgFields) {
     const args = ["access", "ls-collaborators", pkg.name];
+    const registry = Npm.getPackageJsonRegistry(pkg);
 
-    if (Npm.isExternalRegistry(pkg)) {
-      args.push("--registry", pkg.publishConfig?.registry as string);
+    if (registry) {
+      args.push("--registry", registry);
     }
 
     try {
@@ -125,6 +145,57 @@ class Npm {
       process.exit(1);
     }
   }
+
+  private async verifyUserIsAuthenticated() {
+    const username = await Npm.username(Npm.getPackageJsonRegistry(this.pkg));
+
+    const collaborators = await Npm.collaborators(this.pkg);
+    if (!collaborators) {
+      return;
+    }
+
+    const json = JSON.parse(collaborators);
+    const permissions = json[username];
+    if (!permissions || !permissions.includes("write")) {
+      error(
+        "You do not have write permissions required to publish this package.",
+      );
+      process.exit(1);
+    }
+  }
+
+  static isPackageNameAvailable(pkg: BasePkgFields) {
+    const result = validatePkgName(pkg.name);
+
+    if (!result.validForNewPackages) {
+      console.error(chalk.red(`Invalid package name: "${pkg.name}"`));
+      result.errors &&
+        result.errors.forEach((err) => {
+          console.error(chalk.red.dim("Error: " + err));
+        });
+      result.warnings &&
+        result.warnings.forEach((warn) => {
+          console.error(chalk.red.dim("Warning: " + warn));
+        });
+      process.exit(1);
+    }
+
+    return true;
+  }
+
+  static async getConfigRegistry() {
+    const { stdout } = await Npm.npm(["config", "get", "registry"]);
+    return stdout;
+  }
+
+  static getTagVersionPrefix = pMemoize(async () => {
+    try {
+      const { stdout } = await Npm.npm(["config", "get", "tag-version-prefix"]);
+      return stdout;
+    } catch {
+      return "v";
+    }
+  });
 }
 
 export { Npm };
