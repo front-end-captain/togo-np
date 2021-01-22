@@ -223,6 +223,15 @@ class Npm {
   static bumpVersion(input: string) {
     return Npm.npm(["version", input]);
   }
+
+  static publish(options: CliOptions) {
+    const args = ["publish"];
+    if (options.tag) {
+      args.push("--tag", options.tag);
+    }
+
+    return Npm.npm(args);
+  }
 }
 
 export { Npm };

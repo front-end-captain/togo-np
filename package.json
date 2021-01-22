@@ -44,6 +44,7 @@
     "chalk": "^4.1.0",
     "commander": "^6.0.0",
     "dedent": "^0.7.0",
+    "escape-string-regexp": "^4.0.0",
     "execa": "^5.0.0",
     "find-up": "^5.0.0",
     "fs-extra": "^9.0.1",
@@ -51,8 +52,10 @@
     "ignore-walk": "^3.0.3",
     "inquirer": "^7.3.3",
     "issue-regex": "^3.1.0",
+    "onetime": "^5.1.2",
     "p-memoize": "^4.0.1",
     "p-timeout": "^4.1.0",
+    "rxjs": "^6.6.3",
     "semver": "^7.3.2",
     "terminal-link": "^2.1.1",
     "validate-npm-package-name": "^3.0.0"

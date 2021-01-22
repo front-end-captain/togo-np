@@ -36,6 +36,8 @@ export const Reminder = {
     unAuth: "Authentication error. Use `npm whoami` to troubleshoot.",
     unPublish:
       "You do not have write permissions required to publish this package.",
+    publishFail: (msg: string) =>
+      `Error publishing package:\n${msg}\n\nThe project was rolled back to its previous state.`,
   },
   git: {
     noCommits: "No commits found since previous release, exit",

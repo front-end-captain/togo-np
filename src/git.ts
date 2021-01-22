@@ -3,6 +3,7 @@ import execa from "execa";
 import ignoreWalker from "ignore-walk";
 import githubUrlFromGit from "github-url-from-git";
 import { BasePkgFields, CliOptions } from "./definitions";
+import escapeStringRegexp from "escape-string-regexp";
 
 import {
   pkgDir,
@@ -11,7 +12,7 @@ import {
   linkifyIssues,
 } from "./share";
 import { Npm } from "./npm";
-import { error, info } from "@luban-cli/cli-shared-utils";
+import { error, info, warn } from "@luban-cli/cli-shared-utils";
 import { Version } from "./version";
 import { Reminder } from "./constant";
 
@@ -431,6 +432,49 @@ class Git {
     } catch {
       return false;
     }
+  }
+
+  static async deleteTag(tagName: string) {
+    await Git.git(["tag", "--delete", tagName]);
+  }
+
+  static async removeLastCommit() {
+    await Git.git(["reset", "--hard", "HEAD~1"]);
+  }
+
+  static async pushGraceful() {
+    try {
+      await Git.push();
+    } catch (err) {
+      if (err.stderr && err.stderr.includes("GH006")) {
+        await execa("git", ["push", "--tags"]);
+        warn("Branch protection: can`t push the commits. Push them manually.");
+      }
+
+      error(err);
+      process.exit(1);
+    }
+  }
+
+  static async push() {
+    await Git.git(["push", "--follow-tags"]);
+  }
+
+  static async hasUpstream() {
+    const currentBranch = await Git.getCurrentBranch();
+
+    const escapedCurrentBranch = escapeStringRegexp(currentBranch);
+
+    const { stdout } = await Git.git([
+      "status",
+      "--short",
+      "--branch",
+      "--porcelain",
+    ]);
+
+    return new RegExp(
+      String.raw`^## ${escapedCurrentBranch}\.\.\..+\/${escapedCurrentBranch}`,
+    ).test(stdout);
   }
 }
 
