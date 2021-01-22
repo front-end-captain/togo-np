@@ -8,6 +8,7 @@ import pMemoize from "p-memoize";
 import { BasePkgFields, CliOptions } from "./definitions";
 
 import { Version } from "./version";
+import { Reminder } from "./constant";
 
 class Npm {
   private version: Version;
@@ -24,9 +25,7 @@ class Npm {
   public async prepare() {
     if (this.version.isPrereleaseVersionOfNewVersion()) {
       if (!this.pkg.private && !this.options.tag) {
-        error(
-          "You must specify a dist-tag using --tag when publishing a pre-release version. This prevents accidentally tagging unstable versions as 'latest'. https://docs.npmjs.com/cli/dist-tag'",
-        );
+        error(Reminder.npm.shouldSpecifyTag);
         process.exit(1);
       }
     }
@@ -74,9 +73,7 @@ class Npm {
 
   static async checkConnection() {
     const configRegistry = await Npm.getConfigRegistry();
-    const errMsg = `Connection to npm registry(${chalk.yellow(
-      configRegistry,
-    )}) failed`;
+    const errMsg = Reminder.npm.pingFailed(configRegistry);
 
     await pTimeout(
       (async () => {
@@ -116,8 +113,8 @@ class Npm {
       return stdout;
     } catch (error) {
       const err = /ENEEDAUTH/.test(error.stderr)
-        ? "You must be logged in. Use `npm login` and try again."
-        : "Authentication error. Use `npm whoami` to troubleshoot.";
+        ? Reminder.npm.unLogin
+        : Reminder.npm.unAuth;
 
       error(err);
       process.exit(1);
@@ -157,9 +154,7 @@ class Npm {
     const json = JSON.parse(collaborators);
     const permissions = json[username];
     if (!permissions || !permissions.includes("write")) {
-      error(
-        "You do not have write permissions required to publish this package.",
-      );
+      error(Reminder.npm.unPublish);
       process.exit(1);
     }
   }

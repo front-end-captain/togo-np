@@ -3,45 +3,17 @@ import execa from "execa";
 import ignoreWalker from "ignore-walk";
 import githubUrlFromGit from "github-url-from-git";
 import { BasePkgFields, CliOptions } from "./definitions";
-import terminalLink from "terminal-link";
-import issueRegex from "issue-regex";
 
-import { pkgDir } from "./pkg";
+import {
+  pkgDir,
+  linkifyCommit,
+  linkifyCommitRange,
+  linkifyIssues,
+} from "./share";
 import { Npm } from "./npm";
 import { error, info } from "@luban-cli/cli-shared-utils";
 import { Version } from "./version";
-
-function linkifyIssues(url: string, message: string) {
-  if (!(url && terminalLink.isSupported)) {
-    return message;
-  }
-
-  return message.replace(issueRegex(), (issue) => {
-    const issuePart = issue.replace("#", "/issues/");
-
-    if (issue.startsWith("#")) {
-      return terminalLink(issue, `${url}${issuePart}`);
-    }
-
-    return terminalLink(issue, `https://github.com/${issuePart}`);
-  });
-}
-
-function linkifyCommit(url: string, commit: string) {
-  if (!(url && terminalLink.isSupported)) {
-    return commit;
-  }
-
-  return terminalLink(commit, `${url}/commit/${commit}`);
-}
-
-function linkifyCommitRange(url: string, commitRange: string) {
-  if (!(url && terminalLink.isSupported)) {
-    return commitRange;
-  }
-
-  return terminalLink(commitRange, `${url}/compare/${commitRange}`);
-}
+import { Reminder } from "./constant";
 
 class Git {
   private options: CliOptions;
@@ -49,12 +21,18 @@ class Git {
   private pkg: BasePkgFields;
   private version: Version;
 
+  private newTag: string;
+  private releaseBranch: string;
+
   constructor(options: CliOptions, pkg: BasePkgFields, version: Version) {
     this.options = options;
 
     this.pkg = pkg;
 
     this.version = version;
+
+    this.newTag = "";
+    this.releaseBranch = "";
 
     this.repoUrl =
       this.pkg.repository &&
@@ -64,10 +42,10 @@ class Git {
   }
 
   public async prepare() {
+    const defaultBranch = await Git.getDefaultBranch();
+
     if (this.repoUrl) {
       const registryUrl = await Npm.getRegistryUrl(this.pkg);
-
-      const defaultBranch = await Git.getDefaultBranch();
 
       const hasCommits = await Git.printCommitLog(
         this.repoUrl,
@@ -76,23 +54,45 @@ class Git {
       );
 
       if (!hasCommits) {
-        error("No commits found since previous release, exit");
+        error(Reminder.git.noCommits);
         process.exit(1);
       }
     }
 
-    // TODO
-    // 1 检查Git版本是否符合package运行要求
-    // 2.检查Git远端是否可以用
-    // 3.获取新的Git tag
-    // 4.检查新的的Git tag 在远端仓库是否存在
+    await Git.verifyGitVersion(this.pkg);
+
+    await Git.verifyRemoteIsValid();
 
     await this.checkGitTagExistence();
 
-    // 5.检查是否有未拉去的更新(远端和本地是否同步)
-    // 6.检查发布分支是否在远端仓库存在
-    // 7.工作空间是否干净
-    // 8.指定的分支或者当前分支是否是允许发布的分支(if allowAnyBranch = false)
+    await this.verifyRemoteHistoryIsClean();
+
+    await this.verifyWorkingTreeIsClean();
+
+    // 指定的分支或者当前分支是否是允许发布的分支(if allowAnyBranch = false)
+    if (!this.options.allowAnyBranch && this.options.branch) {
+      await this.verifyCurrentBranchIsReleaseBranch(this.options.branch);
+    }
+
+    const releaseBranch = this.options.allowAnyBranch
+      ? defaultBranch
+      : this.options.branch || defaultBranch;
+
+    this.releaseBranch = releaseBranch;
+
+    await this.checkGitBranchExistence(releaseBranch);
+  }
+
+  public getNewTag() {
+    return this.newTag;
+  }
+
+  public getReleaseBranch() {
+    return this.releaseBranch;
+  }
+
+  public getRepoUrl() {
+    return this.repoUrl;
   }
 
   static async printCommitLog(
@@ -103,7 +103,7 @@ class Git {
     const revision = await Git.getLatestTagOrFirstCommitID();
 
     if (!revision) {
-      error("The package has not been published yet.");
+      error(Reminder.git.notPublishYet);
       process.exit(1);
     }
 
@@ -125,13 +125,12 @@ class Git {
     });
 
     const history = commits
-      .map((commit, index) => {
+      .map((commit) => {
         const commitMessage = linkifyIssues(repoUrl, commit.message);
         const commitId = linkifyCommit(repoUrl, commit.id);
-        const indent = index === 0 ? "" : "                ";
-        return `${indent}${commitMessage}  ${commitId}`;
+        return `${commitMessage}  ${commitId}`;
       })
-      .join("\n");
+      .join(" | ");
 
     const commitRange = linkifyCommitRange(repoUrl, commitRangeText);
 
@@ -190,7 +189,6 @@ class Git {
 
       return result;
     } catch {
-      // Get all files under version control but ignored files
       return ignoreWalker({
         path: pkgDir(),
         ignoreFiles: [".gitignore"],
@@ -235,15 +233,13 @@ class Git {
   }
 
   static async getDefaultBranch() {
-    for (const branch of ["main", "master", "gh-pages"]) {
+    for (const branch of ["main", "master"]) {
       if (await Git.hasLocalBranch(branch)) {
         return branch;
       }
     }
 
-    error(
-      "Could not infer the default Git branch. Please specify one with the --branch flag or with a np config.",
-    );
+    error(Reminder.git.notFoundBranch);
     process.exit(1);
   }
 
@@ -312,8 +308,39 @@ class Git {
 
       return false;
     } catch (err) {
-      // Command fails with code 1 and no output if the tag does not exist, even though `--quiet` is provided
-      // https://github.com/sindresorhus/np/pull/73#discussion_r72385685
+      if (err.stdout === "" && err.stderr === "") {
+        return false;
+      }
+
+      error(err);
+      process.exit(1);
+    }
+  }
+
+  static async verifyBranchDoesNotExistOnRemote(branch: string) {
+    const branchExistsOnRemote = await Git.branchExistsOnRemote(branch);
+
+    if (!branchExistsOnRemote) {
+      error(Reminder.git.branchNotExistsOnRemote(branch));
+
+      process.exit(1);
+    }
+  }
+
+  static async branchExistsOnRemote(branch: string) {
+    try {
+      const { stdout: refInfo } = await Git.git([
+        "show-ref",
+        "--verify",
+        `refs/remotes/origin/${branch}`,
+      ]);
+
+      if (refInfo) {
+        return true;
+      }
+
+      return false;
+    } catch (err) {
       if (err.stdout === "" && err.stderr === "") {
         return false;
       }
@@ -328,9 +355,80 @@ class Git {
 
     const tagPrefix = await Npm.getTagVersionPrefix();
 
-    await Git.verifyTagDoesNotExistOnRemote(
-      `${tagPrefix}${this.version.getNewVersion()}`,
-    );
+    const newTag = `${tagPrefix}${this.version.getNewVersion()}`;
+
+    await Git.verifyTagDoesNotExistOnRemote(newTag);
+
+    this.newTag = newTag;
+  }
+
+  private async checkGitBranchExistence(branch: string) {
+    await Git.fetch();
+
+    await Git.verifyBranchDoesNotExistOnRemote(branch);
+  }
+
+  private async verifyRemoteHistoryIsClean() {
+    const isRemoteHistoryClean = await Git.isRemoteHistoryClean();
+    if (!isRemoteHistoryClean) {
+      error(Reminder.git.shouldPullChanges);
+      process.exit(1);
+    }
+  }
+
+  private async verifyWorkingTreeIsClean() {
+    const isWorkingTreeClean = await Git.isWorkingTreeClean();
+    if (!isWorkingTreeClean) {
+      error(Reminder.git.unClean);
+      process.exit(1);
+    }
+  }
+
+  private async verifyCurrentBranchIsReleaseBranch(releaseBranch: string) {
+    const currentBranch = await Git.getCurrentBranch();
+
+    if (currentBranch !== releaseBranch) {
+      error(Reminder.git.branchShouldReleaseBranch(releaseBranch));
+      process.exit(1);
+    }
+  }
+
+  static async getCurrentBranch() {
+    const { stdout } = await Git.git(["symbolic-ref", "--short", "HEAD"]);
+    return stdout;
+  }
+
+  static async isRemoteHistoryClean() {
+    let history = "";
+
+    try {
+      const { stdout } = await Git.git([
+        "rev-list",
+        "--count",
+        "--left-only",
+        "@{u}...HEAD",
+      ]);
+      history = stdout;
+    } catch {}
+
+    if (history && history !== "0") {
+      return false;
+    }
+
+    return true;
+  }
+
+  static async isWorkingTreeClean() {
+    try {
+      const { stdout: status } = await Git.git(["status", "--porcelain"]);
+      if (status !== "") {
+        return false;
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

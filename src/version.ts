@@ -3,19 +3,9 @@ import Semver from "semver";
 import chalk from "chalk";
 import { error } from "@luban-cli/cli-shared-utils";
 
-import { getPackageJson } from "./pkg";
+import { getPackageJson } from "./share";
 import { BasePkgFields } from "./definitions";
-
-const SEMVER_INCREMENTS = [
-  "patch",
-  "minor",
-  "major",
-  "prepatch",
-  "preminor",
-  "premajor",
-  "prerelease",
-];
-// const PRERELEASE_VERSIONS = ["prepatch", "preminor", "premajor", "prerelease"];
+import { Reminder, SEMVER_INCREMENTS } from "./constant";
 
 class Version {
   private inputVersion: Semver.ReleaseType | string;
@@ -60,11 +50,8 @@ class Version {
 
   static validateInputVersion(input: string) {
     if (!Version.isValidInputVersion(input)) {
-      throw new Error(
-        `Version should be either ${SEMVER_INCREMENTS.join(
-          ", ",
-        )} or a valid semver version.`,
-      );
+      error(Reminder.version.invalidInputVersion);
+      process.exit(1);
     }
   }
 
@@ -76,7 +63,8 @@ class Version {
    */
   static validate(input: Semver.SemVer | string) {
     if (!Version.isValidVersion(input)) {
-      throw new Error("Version should be a valid semver version.");
+      error(Reminder.version.invalidVersion);
+      process.exit(1);
     }
   }
 
@@ -135,7 +123,10 @@ class Version {
     if (Version.isValidVersion(inputVersion)) {
       if (Version.isLowerThanOrEqualTo(inputVersion, this.currentVersion)) {
         error(
-          `input version ${inputVersion} must be greater than ${this.currentVersion}`,
+          Reminder.version.lowerThanOrEqualTo(
+            inputVersion,
+            this.currentVersion,
+          ),
         );
         process.exit(1);
       }
@@ -146,9 +137,7 @@ class Version {
 
     if (inputVersion) {
       if (!Version.isValidVersion(inputVersion)) {
-        error(
-          "Please specify a valid semver, for example, `1.2.3`. See https://semver.org",
-        );
+        error(Reminder.version.invalidVersion);
         process.exit(1);
       }
     }
@@ -192,11 +181,14 @@ class Version {
             : input,
         validate: (input) => {
           if (!Version.isValidInputVersion(input)) {
-            return "Please specify a valid semver, for example, `1.2.3`. See https://semver.org";
+            return Reminder.version.invalidVersion;
           }
 
           if (Version.isLowerThanOrEqualTo(input, this.currentVersion)) {
-            return `Version must be greater than ${this.currentVersion}`;
+            return Reminder.version.lowerThanOrEqualTo(
+              input,
+              this.currentVersion,
+            );
           }
 
           return true;
@@ -204,7 +196,9 @@ class Version {
       },
     ]);
 
-    this.nextVersion = (answer.version || answer.customVersion) as string;
+    const _newVersion = (answer.version || answer.customVersion) as string;
+
+    this.nextVersion = _newVersion;
   }
 
   public getNewVersion() {
@@ -231,7 +225,7 @@ class Version {
 
       if (typeof depRange === "string") {
         if (!Semver.satisfies(version, depRange, { includePrerelease: true })) {
-          error(`Please upgrade to ${dependency}${depRange}`);
+          error(Reminder.version.shouldUpgradeDependency(dependency, depRange));
           process.exit(1);
         }
       }

@@ -1,11 +1,11 @@
 import chalk from "chalk";
+
 import { CliOptions } from "./definitions";
 import { Version } from "./version";
 import { Git } from "./git";
-
 import { Spinner } from "@luban-cli/cli-shared-utils";
 import { Npm } from "./npm";
-import { getPackageJson } from "./pkg";
+import { getPackageJson } from "./share";
 
 export async function run(
   inputVersion: string | undefined,
