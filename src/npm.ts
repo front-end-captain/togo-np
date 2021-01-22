@@ -75,19 +75,24 @@ class Npm {
     const configRegistry = await Npm.getConfigRegistry();
     const errMsg = Reminder.npm.pingFailed(configRegistry);
 
-    await pTimeout(
-      (async () => {
-        try {
-          await Npm.npm(["ping"]);
-          return true;
-        } catch {
-          error(errMsg);
-          process.exit(1);
-        }
-      })(),
-      15000,
-      errMsg,
-    );
+    try {
+      await pTimeout(
+        (async () => {
+          try {
+            await Npm.npm(["ping"]);
+            return true;
+          } catch {
+            error(errMsg);
+            process.exit(1);
+          }
+        })(),
+        15000,
+        errMsg,
+      );
+    } catch (ignoreError) {
+      error(errMsg);
+      process.exit(1);
+    }
   }
 
   static async getVersion() {
