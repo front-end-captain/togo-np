@@ -68,9 +68,7 @@ class Git {
 
     await this.verifyRemoteHistoryIsClean();
 
-    if (!process.env._TOGO_DEBUG_) {
-      await this.verifyWorkingTreeIsClean();
-    }
+    await this.verifyWorkingTreeIsClean();
 
     // 指定的分支或者当前分支是否是允许发布的分支(if allowAnyBranch = false)
     if (!this.options.allowAnyBranch && this.options.branch) {
