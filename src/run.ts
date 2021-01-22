@@ -22,22 +22,22 @@ export async function run(
   const version = new Version(inputVersion || "");
   await version.prepare();
 
-  spin.logWithSpinner(`${chalk.bgGreen("Prepare")} npm... `);
+  spin.logWithSpinner(`${chalk.bgCyan("Prepare")} npm... `);
   const npm = new Npm(version, options, pkg);
   await npm.prepare();
   spin.stopSpinner();
 
-  spin.logWithSpinner(`${chalk.bgGreen("Prepare")} git... `);
+  spin.logWithSpinner(`${chalk.bgCyan("Prepare")} git... `);
   const git = new Git(options, pkg, version);
   await git.prepare();
   spin.stopSpinner();
 
   if (options.clean) {
-    spin.logWithSpinner(`${chalk.bgGreen("Clean")} dependencies  ... `);
+    spin.logWithSpinner(`${chalk.bgCyan("Clean")} dependencies  ... `);
     await fs.remove("node_modules");
     spin.stopSpinner();
 
-    spin.logWithSpinner(`${chalk.bgGreen("Install")} dependencies ... `);
+    spin.logWithSpinner(`${chalk.bgCyan("Install")} dependencies ... `);
     await Npm.installDependency();
     spin.stopSpinner();
   }
@@ -71,7 +71,7 @@ export async function run(
     }
   }
 
-  spin.logWithSpinner(`${chalk.bgGreen("Publish")} bumping version ... `);
+  spin.logWithSpinner(`${chalk.bgCyan("Publish")} bumping version ... `);
   try {
     await Npm.bumpVersion(version.getNewVersion());
   } catch (err) {
@@ -109,7 +109,7 @@ export async function run(
     }
   });
 
-  spin.logWithSpinner(`${chalk.bgGreen("Publish")} publish package ... `);
+  spin.logWithSpinner(`${chalk.bgCyan("Publish")} publish package ... `);
 
   let hasPublishErr = false;
   let publishStatus = "UNKNOWN";
@@ -133,7 +133,7 @@ export async function run(
   if (publishStatus === "SUCCESS") {
     const hasUpstream = await Git.hasUpstream();
     if (hasUpstream) {
-      spin.logWithSpinner(`${chalk.bgGreen("Publish")} push git tag ... `);
+      spin.logWithSpinner(`${chalk.bgCyan("Publish")} push git tag ... `);
       await Git.pushGraceful();
       spin.stopSpinner();
     } else {
@@ -146,5 +146,5 @@ export async function run(
   }
 
   const newPkg = getPackageJson();
-  info(`\n ${newPkg.name} ${newPkg.version} published 🎉`);
+  info(`${newPkg.name} ${newPkg.version} published 🎉`);
 }
