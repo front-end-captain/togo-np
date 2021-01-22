@@ -23,7 +23,7 @@
     "commit": "lint-staged && git-cz",
     "test": "jest --env node --runInBand --detectOpenHandles --passWithNoTests",
     "test:coverage": "jest --coverage --color --env node --runInBand --detectOpenHandles --passWithNoTests",
-    "bin": "node bin/index.js patch --allow-any-branch --tag beta --run-scripts 'test lint build' --branch main --clean"
+    "bin": "_TOGO_DEBUG_=true node bin/index.js patch --allow-any-branch --tag beta --run-scripts 'test lint build' --branch main --clean"
   },
   "repository": {
     "type": "git",

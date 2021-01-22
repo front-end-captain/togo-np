@@ -139,7 +139,10 @@ class Npm {
       return stdout;
     } catch (err) {
       // Ignore non-existing package error
-      if (err.stderr.includes("code E404")) {
+      if (
+        err.stderr.includes("code E404") ||
+        err.stderr.includes("code ENOTFOUND")
+      ) {
         return false;
       }
 
