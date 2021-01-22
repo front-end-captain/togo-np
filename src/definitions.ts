@@ -5,7 +5,7 @@ export interface CliOptions {
   allowAnyBranch?: boolean;
   branch?: string;
   clean?: boolean;
-  runScripts?: string[];
+  runScripts?: string;
   version?: ReleaseType | string;
 }
 

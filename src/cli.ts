@@ -34,10 +34,7 @@ program
   .option("--allow-any-branch", " any branch can publish, default 'false'")
   .option("--branch <branch>", "specify branch that allow publish")
   .option("--run-scripts <scripts>", "run specify script")
-  .option(
-    "--clean",
-    "remove 'node_modules' and reinstall before publish, default 'false'",
-  )
+  .option("--clean", "remove 'node_modules' and reinstall, default 'false'")
   .action((inputVersion: undefined | string, cmd: Command) => {
     const options = prepareInitOptions<CliOptions>(cmd);
 

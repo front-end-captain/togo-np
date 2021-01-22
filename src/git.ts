@@ -132,12 +132,12 @@ class Git {
         const commitId = linkifyCommit(repoUrl, commit.id);
         return `${commitMessage}  ${commitId}`;
       })
-      .join(" | ");
+      .join("\n");
 
     const commitRange = linkifyCommitRange(repoUrl, commitRangeText);
 
     console.log("\n");
-    info(history, "Commits");
+    info(`\n${history}`, "Commits");
     info(commitRange, "Commit Range");
     info(registryUrl, "Registry");
     console.log("");

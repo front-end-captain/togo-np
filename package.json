@@ -23,7 +23,7 @@
     "commit": "lint-staged && git-cz",
     "test": "jest --env node --runInBand --detectOpenHandles --passWithNoTests",
     "test:coverage": "jest --coverage --color --env node --runInBand --detectOpenHandles --passWithNoTests",
-    "bin": "_TOGO_DEBUG_=true node bin/index.js patch --allow-any-branch --tag beta --run-scripts 'test lint build' --branch main --clean"
+    "bin": "_TOGO_DEBUG_=true node bin/index.js patch --tag beta --run-scripts 'test eslint build unknown' --branch main"
   },
   "repository": {
     "type": "git",
@@ -82,7 +82,7 @@
     "prettier": "^1.19.1",
     "rimraf": "^3.0.2",
     "ts-jest": "^26.4.4",
-    "typescript": "~4.1.3"
+    "typescript": "3.9.7"
   },
   "config": {
     "commitizen": {

@@ -4,6 +4,8 @@ import pTimeout from "p-timeout";
 import validatePkgName from "validate-npm-package-name";
 import chalk from "chalk";
 import pMemoize from "p-memoize";
+import fs from "fs-extra";
+import path from "path";
 
 import { BasePkgFields, CliOptions } from "./definitions";
 
@@ -199,6 +201,28 @@ class Npm {
       return "v";
     }
   });
+
+  static async installDependency() {
+    const rootDir = process.cwd();
+
+    const hasLockFile =
+      fs.existsSync(path.resolve(rootDir, "package-lock.json")) ||
+      fs.existsSync(path.resolve(rootDir, "npm-shrinkwrap.json"));
+
+    const args = hasLockFile
+      ? ["ci"]
+      : ["install", "--no-package-lock", "--no-production"];
+
+    return Npm.npm([...args, "--engine-strict"]);
+  }
+
+  static async runSpecifyScript(script: string) {
+    return Npm.npm(["run", script]);
+  }
+
+  static bumpVersion(input: string) {
+    return Npm.npm(["version", input]);
+  }
 }
 
 export { Npm };
