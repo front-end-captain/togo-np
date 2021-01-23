@@ -53,8 +53,9 @@ export async function run(
         availableScripts.map(async (script) => {
           return new Promise((resolve) => {
             Npm.runSpecifyScript(script)
-              .then(({ stdout }) => {
+              .then(({ stdout, stderr }) => {
                 console.log(stdout);
+                console.log(stderr);
                 resolve(undefined);
                 done(script, "Run");
               })
