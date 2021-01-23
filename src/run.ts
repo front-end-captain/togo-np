@@ -102,6 +102,7 @@ export async function run(
 
     if (status === "SUCCESS") {
       const newPkg = getPackageJson();
+      console.log();
       info(`${newPkg.name} ${newPkg.version} published 🎉`);
     }
   });
