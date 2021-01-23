@@ -63,6 +63,7 @@ export async function run(
                 console.log();
                 error(script, "Run");
                 console.log(err.stdout);
+                console.log(err.stderr);
                 process.exit(0);
               });
           });
