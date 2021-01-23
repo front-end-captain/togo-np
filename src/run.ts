@@ -116,10 +116,10 @@ export async function run(
   let publishStatus = "UNKNOWN";
 
   await from(Npm.publish(options)).pipe(
-    catchError((err) => {
+    catchError(async (err) => {
       hasPublishErr = true;
 
-      rollback();
+      await rollback();
 
       error(Reminder.npm.pingFailed(err.message));
 
@@ -133,22 +133,19 @@ export async function run(
 
   console.log("publishStatus", publishStatus);
 
-  if (publishStatus === "SUCCESS") {
-    const hasUpstream = await Git.hasUpstream();
+  const hasUpstream = await Git.hasUpstream();
+  console.log("hasUpstream", hasUpstream);
 
-    console.log("hasUpstream", hasUpstream);
-
-    if (hasUpstream) {
+  if (hasUpstream) {
+    if (publishStatus === "SUCCESS") {
       spin.logWithSpinner(`${chalk.bgCyan("Publish")} push git tag ... `);
       await Git.pushGraceful();
       spin.stopSpinner();
     } else {
-      warn("Upstream branch not found; not pushing.");
+      warn("Couldn't publish package to npm; not pushing.");
     }
-  }
-
-  if (publishStatus === "FAILED") {
-    warn("Couldn't publish package to npm; not pushing.");
+  } else {
+    warn("Upstream branch not found; not pushing.");
   }
 
   const newPkg = getPackageJson();
