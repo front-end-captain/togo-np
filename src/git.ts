@@ -1,4 +1,3 @@
-/* eslint-disable no-empty */
 import execa from "execa";
 import ignoreWalker from "ignore-walk";
 import githubUrlFromGit from "github-url-from-git";
@@ -55,8 +54,7 @@ class Git {
       );
 
       if (!hasCommits) {
-        error(Reminder.git.noCommits);
-        process.exit(1);
+        warn(Reminder.git.noCommits);
       }
     }
 
@@ -162,6 +160,7 @@ class Git {
       if (tags.length > 1) {
         prevTag = tags[tags.length - 2];
       }
+      // eslint-disable-next-line no-empty
     } catch (ignoreError) {}
 
     return prevTag;
@@ -202,6 +201,7 @@ class Git {
     try {
       const { stdout } = await Git.git(["rev-list", "--max-parents=0", "HEAD"]);
       firstCommitID = stdout;
+      // eslint-disable-next-line no-empty
     } catch (ignoreError) {}
     return firstCommitID;
   }
@@ -228,6 +228,7 @@ class Git {
         `${revision}..HEAD`,
       ]);
       log = stdout;
+      // eslint-disable-next-line no-empty
     } catch (ignoreError) {}
 
     return log;
@@ -410,6 +411,7 @@ class Git {
         "@{u}...HEAD",
       ]);
       history = stdout;
+      // eslint-disable-next-line no-empty
     } catch {}
 
     if (history && history !== "0") {

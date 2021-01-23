@@ -44,7 +44,7 @@ export const Reminder = {
       `Couldn't roll back because of the following error:\n${err}.`,
   },
   git: {
-    noCommits: "No commits found since previous release, exit.",
+    noCommits: "No commits found since previous release.",
     notPublishYet: "The package has not been published yet.",
     notFoundBranch:
       "Could not infer the default Git branch. Please specify one with the --branch flag or with a np config.",
