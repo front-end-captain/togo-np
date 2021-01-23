@@ -131,8 +131,13 @@ export async function run(
   );
   spin.stopSpinner();
 
+  console.log("publishStatus", publishStatus);
+
   if (publishStatus === "SUCCESS") {
     const hasUpstream = await Git.hasUpstream();
+
+    console.log("hasUpstream", hasUpstream);
+
     if (hasUpstream) {
       spin.logWithSpinner(`${chalk.bgCyan("Publish")} push git tag ... `);
       await Git.pushGraceful();
