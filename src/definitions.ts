@@ -1,5 +1,7 @@
 import { ReleaseType } from "semver";
 
+export type PublishStatus = "UNKNOWN" | "SUCCESS" | "FAILED";
+
 export interface CliOptions {
   tag?: string;
   allowAnyBranch?: boolean;

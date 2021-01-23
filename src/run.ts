@@ -1,8 +1,5 @@
 import chalk from "chalk";
-import { from } from "rxjs";
 import fs from "fs-extra";
-import { catchError, finalize } from "rxjs/operators";
-import onetime from "onetime";
 
 import { CliOptions } from "./definitions";
 import { Version } from "./version";
@@ -11,6 +8,8 @@ import { done, error, Spinner, info, warn } from "@luban-cli/cli-shared-utils";
 import { Npm } from "./npm";
 import { getPackageJson } from "./share";
 import { Reminder } from "./constant";
+
+import { publish } from "./publish";
 
 export async function run(
   inputVersion: string | undefined,
@@ -82,73 +81,28 @@ export async function run(
 
   spin.stopSpinner();
 
-  const rollback = onetime(async () => {
-    console.log("\nPublish failed. Rolling back to the previous state…");
-
-    const tagVersionPrefix = await Npm.getTagVersionPrefix();
-
-    const latestTag = await Git.getLatestTag();
-    const versionInLatestTag = latestTag.slice(tagVersionPrefix.length);
-
-    try {
-      if (
-        versionInLatestTag === getPackageJson().version &&
-        versionInLatestTag !== pkg.version
-      ) {
-        // Verify that the package's version has been bumped before deleting the last tag and commit.
-        await Git.deleteTag(latestTag);
-        await Git.removeLastCommit();
-      }
-
-      console.log(
-        "Successfully rolled back the project to its previous state.",
-      );
-    } catch (error) {
-      console.log(
-        `Couldn't roll back because of the following error:\n${error}`,
-      );
-    }
-  });
-
   spin.logWithSpinner(`${chalk.bgCyan("Publish")} publish package ... `);
 
-  let hasPublishErr = false;
-  let publishStatus = "UNKNOWN";
+  publish(options, pkg, async (status) => {
+    spin.stopSpinner();
 
-  await from(Npm.publish(options)).pipe(
-    catchError(async (err) => {
-      hasPublishErr = true;
+    const hasUpstream = await Git.hasUpstream();
 
-      await rollback();
-
-      error(Reminder.npm.pingFailed(err.message));
-
-      process.exit(1);
-    }),
-    finalize(() => {
-      publishStatus = hasPublishErr ? "FAILED" : "SUCCESS";
-    }),
-  );
-  spin.stopSpinner();
-
-  console.log("publishStatus", publishStatus);
-
-  const hasUpstream = await Git.hasUpstream();
-  console.log("hasUpstream", hasUpstream);
-
-  if (hasUpstream) {
-    if (publishStatus === "SUCCESS") {
-      spin.logWithSpinner(`${chalk.bgCyan("Publish")} push git tag ... `);
-      await Git.pushGraceful();
-      spin.stopSpinner();
+    if (hasUpstream) {
+      if (status === "SUCCESS") {
+        spin.logWithSpinner(`${chalk.bgCyan("Publish")} push git tag ... `);
+        await Git.pushGraceful();
+        spin.stopSpinner();
+      } else {
+        warn(Reminder.git.notPushTag);
+      }
     } else {
-      warn("Couldn't publish package to npm; not pushing.");
+      warn(Reminder.git.upstreamInexistence);
     }
-  } else {
-    warn("Upstream branch not found; not pushing.");
-  }
 
-  const newPkg = getPackageJson();
-  console.log();
-  info(`${newPkg.name} ${newPkg.version} published 🎉`);
+    if (status === "SUCCESS") {
+      const newPkg = getPackageJson();
+      info(`${newPkg.name} ${newPkg.version} published 🎉`);
+    }
+  });
 }
