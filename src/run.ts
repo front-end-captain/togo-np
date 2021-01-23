@@ -71,6 +71,7 @@ export async function run(
     }
   }
 
+  console.log();
   spin.logWithSpinner(`${chalk.bgCyan("Publish")} bumping version ... `);
   try {
     await Npm.bumpVersion(version.getNewVersion());
@@ -146,5 +147,6 @@ export async function run(
   }
 
   const newPkg = getPackageJson();
+  console.log();
   info(`${newPkg.name} ${newPkg.version} published 🎉`);
 }
