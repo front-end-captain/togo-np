@@ -1,7 +1,6 @@
 import inquirer from "inquirer";
 import Semver from "semver";
 import chalk from "chalk";
-import { error } from "@luban-cli/cli-shared-utils";
 
 import { getPackageJson } from "./share";
 import { BasePkgFields } from "./definitions";
@@ -50,8 +49,7 @@ class Version {
 
   static validateInputVersion(input: string) {
     if (!Version.isValidInputVersion(input)) {
-      error(Reminder.version.invalidInputVersion);
-      process.exit(1);
+      throw new Error(Reminder.version.invalidInputVersion);
     }
   }
 
@@ -63,8 +61,7 @@ class Version {
    */
   static validate(input: Semver.SemVer | string) {
     if (!Version.isValidVersion(input)) {
-      error(Reminder.version.invalidVersion);
-      process.exit(1);
+      throw new Error(Reminder.version.invalidVersion);
     }
   }
 
@@ -122,13 +119,12 @@ class Version {
 
     if (Version.isValidVersion(inputVersion)) {
       if (Version.isLowerThanOrEqualTo(inputVersion, this.currentVersion)) {
-        error(
+        throw new Error(
           Reminder.version.lowerThanOrEqualTo(
             inputVersion,
             this.currentVersion,
           ),
         );
-        process.exit(1);
       }
 
       this.nextVersion = inputVersion;
@@ -137,8 +133,7 @@ class Version {
 
     if (inputVersion) {
       if (!Version.isValidVersion(inputVersion)) {
-        error(Reminder.version.invalidVersion);
-        process.exit(1);
+        throw new Error(Reminder.version.invalidVersion);
       }
     }
 
@@ -225,8 +220,9 @@ class Version {
 
       if (typeof depRange === "string") {
         if (!Semver.satisfies(version, depRange, { includePrerelease: true })) {
-          error(Reminder.version.shouldUpgradeDependency(dependency, depRange));
-          process.exit(1);
+          throw new Error(
+            Reminder.version.shouldUpgradeDependency(dependency, depRange),
+          );
         }
       }
     }

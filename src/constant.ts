@@ -1,10 +1,3 @@
-export const PRERELEASE_VERSIONS = [
-  "prepatch",
-  "preminor",
-  "premajor",
-  "prerelease",
-];
-
 export const SEMVER_INCREMENTS = [
   "patch",
   "minor",
@@ -21,7 +14,7 @@ export const Reminder = {
       ", ",
     )} or a valid semver version.`,
     invalidVersion:
-      "Version should be a valid semver version, for example, `1.2.3`. See https://semver.org.",
+      "Version should be a valid semver version, for example, ’1.2.3‘. See https://semver.org.",
     lowerThanOrEqualTo: (v1: string, v2: string) =>
       `Version ${v1} must be greater than ${v2}.`,
     shouldUpgradeDependency: (dependency: string, depRange: string) =>
@@ -29,11 +22,11 @@ export const Reminder = {
   },
   npm: {
     shouldSpecifyTag:
-      "You must specify a dist-tag using --tag when publishing a pre-release version. This prevents accidentally tagging unstable versions as 'latest'. https://docs.npmjs.com/cli/dist-tag'.",
+      "You must specify a dist-tag using '--tag' when publishing a pre-release version. This prevents accidentally tagging unstable versions as 'latest'. https://docs.npmjs.com/cli/dist-tag'.",
     pingFailed: (registry: string) =>
       `Connection to npm registry(${registry}) failed.`,
-    unLogin: "You must be logged in. Use `npm login` and try again.",
-    unAuth: "Authentication error. Use `npm whoami` to troubleshoot.",
+    unLogin: "You must be logged in. Use 'npm login and try again.",
+    unAuth: "Authentication error. Use 'npm whoami' to troubleshoot.",
     unPublish:
       "You do not have write permissions required to publish this package.",
     publishFail: (msg: string) =>
@@ -47,13 +40,13 @@ export const Reminder = {
     noCommits: "No commits found since previous release.",
     notPublishYet: "The package has not been published yet.",
     notFoundBranch:
-      "Could not infer the default Git branch. Please specify one with the --branch flag or with a np config.",
+      "Could not infer the default Git branch. Please specify one with the '--branch' flag or with a np config.",
     shouldPullChanges: "Remote history differs. Please pull changes.",
     unClean: "Unclean working tree. Commit or stash changes first.",
     branchNotExistsOnRemote: (branch: string) =>
-      `Git branch \`${branch}\` not exists.`,
+      `Git branch '${branch}' not exists.`,
     branchShouldReleaseBranch: (releaseBranch: string) =>
-      `Not on \`${releaseBranch}\` branch. Use --any-branch to publish anyway, or set a different release branch using --branch.`,
+      `Not on '${releaseBranch}' branch. Use '--allow-any-branch' to publish anyway, or set a different release branch using '--branch'.`,
     upstreamInexistence: "Upstream branch not found; not pushing.",
     notPushTag: "Couldn't publish package to npm; not pushing.",
   },

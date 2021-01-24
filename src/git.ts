@@ -11,7 +11,7 @@ import {
   linkifyIssues,
 } from "./share";
 import { Npm } from "./npm";
-import { error, info, warn } from "@luban-cli/cli-shared-utils";
+import { info, warn } from "@luban-cli/cli-shared-utils";
 import { Version } from "./version";
 import { Reminder } from "./constant";
 
@@ -24,7 +24,7 @@ class Git {
   private newTag: string;
   private releaseBranch: string;
 
-  constructor(options: CliOptions, pkg: BasePkgFields, version: Version) {
+  constructor(version: Version, pkg: BasePkgFields, options: CliOptions) {
     this.options = options;
 
     this.pkg = pkg;
@@ -102,8 +102,7 @@ class Git {
     const revision = await Git.getLatestTagOrFirstCommitID();
 
     if (!revision) {
-      error(Reminder.git.notPublishYet);
-      process.exit(1);
+      throw new Error(Reminder.git.notPublishYet);
     }
 
     const log = await Git.commitLogFromRevision(revision);
@@ -241,8 +240,7 @@ class Git {
       }
     }
 
-    error(Reminder.git.notFoundBranch);
-    process.exit(1);
+    throw new Error(Reminder.git.notFoundBranch);
   }
 
   static async hasLocalBranch(branch: string) {
@@ -271,8 +269,7 @@ class Git {
     try {
       await Git.git(["ls-remote", "origin", "HEAD"]);
     } catch (error) {
-      error(error.stderr.replace("fatal:", "Git fatal error:"));
-      process.exit(1);
+      throw new Error(error.stderr.replace("fatal:", "Git fatal error:"));
     }
   }
 
@@ -289,9 +286,7 @@ class Git {
 
   static async verifyTagDoesNotExistOnRemote(tagName: string) {
     if (await Git.tagExistsOnRemote(tagName)) {
-      error(`Git tag \`${tagName}\` already exists.`);
-
-      process.exit(1);
+      throw new Error(`Git tag \`${tagName}\` already exists.`);
     }
   }
 
@@ -314,8 +309,7 @@ class Git {
         return false;
       }
 
-      error(err);
-      process.exit(1);
+      throw new Error(err);
     }
   }
 
@@ -323,9 +317,7 @@ class Git {
     const branchExistsOnRemote = await Git.branchExistsOnRemote(branch);
 
     if (!branchExistsOnRemote) {
-      error(Reminder.git.branchNotExistsOnRemote(branch));
-
-      process.exit(1);
+      throw new Error(Reminder.git.branchNotExistsOnRemote(branch));
     }
   }
 
@@ -347,8 +339,7 @@ class Git {
         return false;
       }
 
-      error(err);
-      process.exit(1);
+      throw new Error(err);
     }
   }
 
@@ -373,16 +364,14 @@ class Git {
   private async verifyRemoteHistoryIsClean() {
     const isRemoteHistoryClean = await Git.isRemoteHistoryClean();
     if (!isRemoteHistoryClean) {
-      error(Reminder.git.shouldPullChanges);
-      process.exit(1);
+      throw new Error(Reminder.git.shouldPullChanges);
     }
   }
 
   private async verifyWorkingTreeIsClean() {
     const isWorkingTreeClean = await Git.isWorkingTreeClean();
     if (!isWorkingTreeClean) {
-      error(Reminder.git.unClean);
-      process.exit(1);
+      throw new Error(Reminder.git.unClean);
     }
   }
 
@@ -390,8 +379,7 @@ class Git {
     const currentBranch = await Git.getCurrentBranch();
 
     if (currentBranch !== releaseBranch) {
-      error(Reminder.git.branchShouldReleaseBranch(releaseBranch));
-      process.exit(1);
+      throw new Error(Reminder.git.branchShouldReleaseBranch(releaseBranch));
     }
   }
 
@@ -447,12 +435,11 @@ class Git {
       await Git.push();
     } catch (err) {
       if (err.stderr && err.stderr.includes("GH006")) {
-        await execa("git", ["push", "--tags"]);
+        await Git.git(["push", "--tags"]);
         warn("Branch protection: can`t push the commits. Push them manually.");
       }
 
-      error(err);
-      process.exit(1);
+      throw new Error(err);
     }
   }
 

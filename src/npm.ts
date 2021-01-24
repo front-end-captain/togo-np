@@ -1,4 +1,3 @@
-import { error } from "@luban-cli/cli-shared-utils";
 import execa from "execa";
 import pTimeout from "p-timeout";
 import validatePkgName from "validate-npm-package-name";
@@ -17,9 +16,9 @@ class Npm {
   private options: CliOptions;
   private pkg: BasePkgFields;
 
-  constructor(version: Version, _options: CliOptions, pkg: BasePkgFields) {
+  constructor(version: Version, pkg: BasePkgFields, options: CliOptions) {
     this.version = version;
-    this.options = _options;
+    this.options = options;
 
     this.pkg = pkg;
   }
@@ -27,8 +26,7 @@ class Npm {
   public async prepare() {
     if (this.version.isPrereleaseVersionOfNewVersion()) {
       if (!this.pkg.private && !this.options.tag) {
-        error(Reminder.npm.shouldSpecifyTag);
-        process.exit(1);
+        throw new Error(Reminder.npm.shouldSpecifyTag);
       }
     }
 
@@ -75,7 +73,9 @@ class Npm {
 
   static async checkConnection() {
     const configRegistry = await Npm.getConfigRegistry();
+
     const errMsg = Reminder.npm.pingFailed(configRegistry);
+    const err = new Error(errMsg);
 
     try {
       await pTimeout(
@@ -84,16 +84,14 @@ class Npm {
             await Npm.npm(["ping"]);
             return true;
           } catch {
-            error(errMsg);
-            process.exit(1);
+            throw err;
           }
         })(),
         15000,
         errMsg,
       );
     } catch (ignoreError) {
-      error(errMsg);
-      process.exit(1);
+      throw err;
     }
   }
 
@@ -123,8 +121,7 @@ class Npm {
         ? Reminder.npm.unLogin
         : Reminder.npm.unAuth;
 
-      error(err);
-      process.exit(1);
+      throw new Error(err);
     }
   }
 
@@ -148,8 +145,7 @@ class Npm {
         return false;
       }
 
-      error(err);
-      process.exit(1);
+      throw new Error(err);
     }
   }
 
@@ -164,8 +160,7 @@ class Npm {
     const json = JSON.parse(collaborators);
     const permissions = json[username];
     if (!permissions || !permissions.includes("write")) {
-      error(Reminder.npm.unPublish);
-      process.exit(1);
+      throw new Error(Reminder.npm.unPublish);
     }
   }
 
@@ -173,7 +168,6 @@ class Npm {
     const result = validatePkgName(pkg.name);
 
     if (!result.validForNewPackages) {
-      console.error(chalk.red(`Invalid package name: "${pkg.name}"`));
       result.errors &&
         result.errors.forEach((err) => {
           console.error(chalk.red.dim("Error: " + err));
@@ -182,7 +176,8 @@ class Npm {
         result.warnings.forEach((warn) => {
           console.error(chalk.red.dim("Warning: " + warn));
         });
-      process.exit(1);
+
+      throw new Error(`Invalid package name: "${pkg.name}"`);
     }
 
     return true;

@@ -1,6 +1,6 @@
 import { Command, Option } from "commander";
 import dedent from "dedent";
-import { log } from "@luban-cli/cli-shared-utils";
+import { error, info, log } from "@luban-cli/cli-shared-utils";
 import { CliOptions } from "./definitions";
 
 import { run } from "./run";
@@ -9,7 +9,7 @@ function camelize(str: string): string {
   return str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : ""));
 }
 
-function prepareInitOptions<T>(cmd: Command) {
+function prepareOptions<T>(cmd: Command) {
   const args = {} as Record<string, any>;
 
   (cmd.options as Array<Option>).forEach((o) => {
@@ -33,12 +33,24 @@ program
   .option("--tag <tag>", "specify dist-tag, default 'latest'")
   .option("--allow-any-branch", " any branch can publish, default 'false'")
   .option("--branch <branch>", "specify branch that allow publish")
-  .option("--run-scripts <scripts>", "run specify script")
+  .option(
+    "--run-scripts <scripts>",
+    "run specify script, for example, --run-scripts 'test build'",
+  )
   .option("--clean", "remove 'node_modules' and reinstall, default 'false'")
-  .action((inputVersion: undefined | string, cmd: Command) => {
-    const options = prepareInitOptions<CliOptions>(cmd);
+  .action(async (inputVersion: undefined | string, cmd: Command) => {
+    const options = prepareOptions<CliOptions>(cmd);
 
-    run(inputVersion, options);
+    try {
+      await run(inputVersion, options);
+    } catch (err) {
+      error(err.message);
+
+      console.log();
+
+      info("Publish exception, Exit.");
+      process.exit(1);
+    }
   });
 
 program.on("--help", () => {

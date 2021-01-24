@@ -49,10 +49,7 @@ export function publish(
 
       await rollback(pkg);
 
-      console.log();
-      error(Reminder.npm.publishFail(err.message));
-
-      process.exit(1);
+      throw new Error(Reminder.npm.publishFail(err.message));
     }),
     finalize(() => {
       publishStatus = hasPublishErr ? "FAILED" : "SUCCESS";
