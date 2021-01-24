@@ -12,14 +12,11 @@ import { Reminder } from "./constant";
 import { publish } from "./publish";
 import { runScripts } from "./runScripts";
 
-export async function run(
-  inputVersion: string | undefined,
-  options: CliOptions,
-) {
+export async function run(inputVersion: string = "", options: CliOptions = {}) {
   const pkg = getPackageJson();
   const spin = new Spinner();
 
-  const version = new Version(inputVersion || "");
+  const version = new Version(inputVersion);
   await version.prepare();
 
   spin.logWithSpinner(`${chalk.bgCyan("Prepare")} npm... `);
