@@ -1,5 +1,3 @@
-import { ReleaseType } from "semver";
-
 export type PublishStatus = "UNKNOWN" | "SUCCESS" | "FAILED";
 
 export interface CliOptions {
@@ -8,7 +6,6 @@ export interface CliOptions {
   branch?: string;
   clean?: boolean;
   runScripts?: string;
-  version?: ReleaseType | string;
 }
 
 /**
