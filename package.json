@@ -48,7 +48,6 @@
     "find-up": "^5.0.0",
     "fs-extra": "^9.0.1",
     "github-url-from-git": "^1.5.0",
-    "ignore-walk": "^3.0.3",
     "inquirer": "^7.3.3",
     "issue-regex": "^3.1.0",
     "onetime": "^5.1.2",
@@ -65,7 +64,6 @@
     "@types/dedent": "^0.7.0",
     "@types/fs-extra": "^9.0.1",
     "@types/github-url-from-git": "^1.5.0",
-    "@types/ignore-walk": "^3.0.1",
     "@types/inquirer": "^7.3.0",
     "@types/listr": "^0.14.2",
     "@types/semver": "^7.3.4",
@@ -104,5 +102,9 @@
   },
   "engines": {
     "node": ">=10"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   }
 }

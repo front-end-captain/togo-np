@@ -1,8 +1,9 @@
 import { done, warn } from "@luban-cli/cli-shared-utils";
 
-import { BasePkgFields } from "./definitions";
-
+import { Reminder } from "./constant";
 import { Npm } from "./npm";
+
+import { BasePkgFields } from "./definitions";
 
 export async function runScripts(input: string, pkg: BasePkgFields) {
   const scripts = input.split(" ");
@@ -19,20 +20,21 @@ export async function runScripts(input: string, pkg: BasePkgFields) {
             .then(({ stdout, stderr }) => {
               console.log(stdout);
               console.log(stderr);
-              resolve(undefined);
+
+              resolve(0);
+
               done(script, "Run");
             })
             .catch((err) => {
               console.log(err.stdout);
               console.log(err.stderr);
+
               throw new Error(`Run scripts '${script}' exception.`);
             });
         });
       }),
     );
   } else {
-    warn(
-      "There are no runnable scripts. Please check you specified option '--run-scripts'",
-    );
+    warn(Reminder.other.noRunnableScripts);
   }
 }

@@ -27,7 +27,7 @@ export const Reminder = {
       `Connection to npm registry(${registry}) failed.`,
     unLogin: "You must be logged in. Use 'npm login and try again.",
     unAuth: "Authentication error. Use 'npm whoami' to troubleshoot.",
-    unPublish:
+    unPublishPermission:
       "You do not have write permissions required to publish this package.",
     publishFail: (msg: string) =>
       `Error publishing package:\n${msg}\n\nThe project was rolled back to its previous state.`,
@@ -49,5 +49,9 @@ export const Reminder = {
       `Not on '${releaseBranch}' branch. Use '--allow-any-branch' to publish anyway, or set a different release branch using '--branch'.`,
     upstreamInexistence: "Upstream branch not found; not pushing.",
     notPushTag: "Couldn't publish package to npm; not pushing.",
+  },
+  other: {
+    noRunnableScripts:
+      "There are no runnable scripts. Please check you specified option '--run-scripts'",
   },
 };

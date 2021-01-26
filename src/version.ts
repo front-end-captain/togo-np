@@ -19,89 +19,6 @@ class Version {
     this.nextVersion = "";
   }
 
-  static isValidVersion(input: Semver.SemVer | string) {
-    return Boolean(Semver.valid(input));
-  }
-
-  static isSemverIncrementVersion(input: string) {
-    return SEMVER_INCREMENTS.includes(input);
-  }
-
-  static isValidInputVersion(input: string) {
-    return (
-      Version.isSemverIncrementVersion(input) || Version.isValidVersion(input)
-    );
-  }
-
-  static getNewVersionFrom(
-    from: string | Semver.SemVer,
-    input: Semver.ReleaseType,
-    identifier?: string,
-  ) {
-    Version.validate(from);
-
-    Version.validateInputVersion(input);
-
-    return SEMVER_INCREMENTS.includes(input)
-      ? Semver.inc(from, input, identifier)
-      : input;
-  }
-
-  static validateInputVersion(input: string) {
-    if (!Version.isValidInputVersion(input)) {
-      throw new Error(Reminder.version.invalidInputVersion);
-    }
-  }
-
-  /**
-   * validate input is a valid semver version
-   *
-   * @param input version
-   * @throws Error
-   */
-  static validate(input: Semver.SemVer | string) {
-    if (!Version.isValidVersion(input)) {
-      throw new Error(Reminder.version.invalidVersion);
-    }
-  }
-
-  static isLowerThanOrEqualTo(
-    version: Semver.SemVer | string,
-    nextVersion: Semver.SemVer | string,
-  ) {
-    Version.validate(version);
-    Version.validate(nextVersion);
-    return Semver.lte(version, nextVersion);
-  }
-
-  static prettyVersionDiff(oldVersion: string, inc: Semver.ReleaseType) {
-    const newVersion = Version.getNewVersionFrom(oldVersion, inc);
-    if (!newVersion) {
-      return "";
-    }
-
-    const _newVersion = newVersion.split(".");
-    const _oldVersion = oldVersion.split(".");
-
-    let firstVersionChange = false;
-    const output = [];
-
-    for (const [i, element] of _newVersion.entries()) {
-      if (element !== _oldVersion[i] && !firstVersionChange) {
-        output.push(`${chalk.dim.cyan(element)}`);
-        firstVersionChange = true;
-      } else if (element.indexOf("-") >= 1) {
-        let preVersion = [];
-        preVersion = element.split("-");
-        output.push(`${chalk.dim.cyan(`${preVersion[0]}-${preVersion[1]}`)}`);
-      } else {
-        output.push(chalk.reset.dim(element));
-      }
-    }
-
-    return output.join(chalk.reset.dim("."));
-  }
-
   public async prepare() {
     const inputVersion = this.inputVersion;
 
@@ -206,6 +123,89 @@ class Version {
 
   public getCurrentVersion() {
     return this.currentVersion;
+  }
+
+  static isValidVersion(input: Semver.SemVer | string) {
+    return Boolean(Semver.valid(input));
+  }
+
+  static isSemverIncrementVersion(input: string) {
+    return SEMVER_INCREMENTS.includes(input);
+  }
+
+  static isValidInputVersion(input: string) {
+    return (
+      Version.isSemverIncrementVersion(input) || Version.isValidVersion(input)
+    );
+  }
+
+  static getNewVersionFrom(
+    from: string | Semver.SemVer,
+    input: Semver.ReleaseType,
+    identifier?: string,
+  ) {
+    Version.validate(from);
+
+    Version.validateInputVersion(input);
+
+    return SEMVER_INCREMENTS.includes(input)
+      ? Semver.inc(from, input, identifier)
+      : input;
+  }
+
+  static validateInputVersion(input: string) {
+    if (!Version.isValidInputVersion(input)) {
+      throw new Error(Reminder.version.invalidInputVersion);
+    }
+  }
+
+  /**
+   * validate input is a valid semver version
+   *
+   * @param input version
+   * @throws Error
+   */
+  static validate(input: Semver.SemVer | string) {
+    if (!Version.isValidVersion(input)) {
+      throw new Error(Reminder.version.invalidVersion);
+    }
+  }
+
+  static isLowerThanOrEqualTo(
+    version: Semver.SemVer | string,
+    nextVersion: Semver.SemVer | string,
+  ) {
+    Version.validate(version);
+    Version.validate(nextVersion);
+    return Semver.lte(version, nextVersion);
+  }
+
+  static prettyVersionDiff(oldVersion: string, inc: Semver.ReleaseType) {
+    const newVersion = Version.getNewVersionFrom(oldVersion, inc);
+    if (!newVersion) {
+      return "";
+    }
+
+    const _newVersion = newVersion.split(".");
+    const _oldVersion = oldVersion.split(".");
+
+    let firstVersionChange = false;
+    const output = [];
+
+    for (const [i, element] of _newVersion.entries()) {
+      if (element !== _oldVersion[i] && !firstVersionChange) {
+        output.push(`${chalk.dim.cyan(element)}`);
+        firstVersionChange = true;
+      } else if (element.indexOf("-") >= 1) {
+        let preVersion = [];
+        preVersion = element.split("-");
+        output.push(`${chalk.dim.cyan(`${preVersion[0]}-${preVersion[1]}`)}`);
+      } else {
+        output.push(chalk.reset.dim(element));
+      }
+    }
+
+    return output.join(chalk.reset.dim("."));
   }
 
   static verifyRequirementSatisfied(

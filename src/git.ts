@@ -1,15 +1,9 @@
 import execa from "execa";
-import ignoreWalker from "ignore-walk";
 import githubUrlFromGit from "github-url-from-git";
 import { BasePkgFields, CliOptions } from "./definitions";
 import escapeStringRegexp from "escape-string-regexp";
 
-import {
-  pkgDir,
-  linkifyCommit,
-  linkifyCommitRange,
-  linkifyIssues,
-} from "./share";
+import { linkifyCommit, linkifyCommitRange, linkifyIssues } from "./share";
 import { Npm } from "./npm";
 import { info, warn } from "@luban-cli/cli-shared-utils";
 import { Version } from "./version";
@@ -163,36 +157,6 @@ class Git {
     } catch (ignoreError) {}
 
     return prevTag;
-  }
-
-  static async getFilesOfAfterLatestReleased() {
-    try {
-      const latestTag = await Git.getLatestTag();
-
-      const { stdout } = await Git.git([
-        "diff",
-        "--name-only",
-        "--diff-filter=A",
-        latestTag,
-        "HEAD",
-      ]);
-
-      if (stdout.trim().length === 0) {
-        return [];
-      }
-
-      const result = stdout
-        .trim()
-        .split("\n")
-        .map((row) => row.trim());
-
-      return result;
-    } catch {
-      return ignoreWalker({
-        path: pkgDir(),
-        ignoreFiles: [".gitignore"],
-      });
-    }
   }
 
   static async getFirstCommitID() {

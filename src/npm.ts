@@ -159,11 +159,17 @@ class Npm {
 
     const json = JSON.parse(collaborators);
     const permissions = json[username];
+
     if (!permissions || !permissions.includes("write")) {
-      throw new Error(Reminder.npm.unPublish);
+      throw new Error(Reminder.npm.unPublishPermission);
     }
   }
 
+  /**
+   *
+   * @param pkg
+   * @throws Error
+   */
   static isPackageNameAvailable(pkg: BasePkgFields) {
     const result = validatePkgName(pkg.name);
 
@@ -179,8 +185,6 @@ class Npm {
 
       throw new Error(`Invalid package name: "${pkg.name}"`);
     }
-
-    return true;
   }
 
   static async getConfigRegistry() {
