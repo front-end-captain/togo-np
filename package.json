@@ -18,8 +18,6 @@
     "format:check": "prettier --check src/**/*.{ts,tsx}",
     "release:beta": "node bin/index.js prerelease --tag beta --run-scripts 'test eslint build' --allow-any-branch",
     "release": "node bin/index.js patch --tag latest --run-scripts 'test eslint build' --branch main",
-    "pre:release": "npm run clean && npm run format && npm run eslint",
-    "prepublishOnly": "npm run build",
     "build": "rimraf lib && cross-env NODE_ENV=production tsc --pretty",
     "watch": "npm run build -- --watch --diagnostics",
     "commit": "lint-staged && git-cz",
