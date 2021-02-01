@@ -40,7 +40,7 @@ export const Reminder = {
     noCommits: "No commits found since previous release.",
     notPublishYet: "The package has not been published yet.",
     notFoundBranch:
-      "Could not infer the default Git branch. Please specify one with the '--branch' flag or with a np config.",
+      "Could not infer the default Git branch. Please specify one with the '--branch' flag.",
     shouldPullChanges: "Remote history differs. Please pull changes.",
     unClean: "Unclean working tree. Commit or stash changes first.",
     branchNotExistsOnRemote: (branch: string) =>

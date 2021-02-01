@@ -36,7 +36,20 @@ class Git {
   }
 
   public async prepare() {
+    // 指定的分支或者当前分支是否是允许发布的分支(if allowAnyBranch = false)
+    if (!this.options.allowAnyBranch && this.options.branch) {
+      await this.verifyCurrentBranchIsReleaseBranch(this.options.branch);
+    }
+
+    const currentBranch = await Git.getCurrentBranch();
+
     const defaultBranch = await Git.getDefaultBranch();
+
+    const releaseBranch = this.options.allowAnyBranch
+      ? currentBranch
+      : this.options.branch || defaultBranch;
+
+    this.releaseBranch = releaseBranch;
 
     if (this.repoUrl) {
       const registryUrl = await Npm.getRegistryUrl(this.pkg);
@@ -44,7 +57,7 @@ class Git {
       const hasCommits = await Git.printCommitLog(
         this.repoUrl,
         registryUrl,
-        this.options.branch || defaultBranch,
+        this.releaseBranch,
       );
 
       if (!hasCommits) {
@@ -61,17 +74,6 @@ class Git {
     await this.verifyRemoteHistoryIsClean();
 
     await this.verifyWorkingTreeIsClean();
-
-    // 指定的分支或者当前分支是否是允许发布的分支(if allowAnyBranch = false)
-    if (!this.options.allowAnyBranch && this.options.branch) {
-      await this.verifyCurrentBranchIsReleaseBranch(this.options.branch);
-    }
-
-    const releaseBranch = this.options.allowAnyBranch
-      ? defaultBranch
-      : this.options.branch || defaultBranch;
-
-    this.releaseBranch = releaseBranch;
 
     await this.checkGitBranchExistence(releaseBranch);
   }
@@ -348,8 +350,16 @@ class Git {
   }
 
   static async getCurrentBranch() {
-    const { stdout } = await Git.git(["symbolic-ref", "--short", "HEAD"]);
-    return stdout;
+    let currentBranch = "";
+
+    try {
+      const { stdout } = await Git.git(["symbolic-ref", "--short", "HEAD"]);
+      currentBranch = stdout;
+    } catch (ignoreError) {
+      // ignore error
+    }
+
+    return currentBranch;
   }
 
   static async isRemoteHistoryClean() {
