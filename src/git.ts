@@ -41,15 +41,13 @@ class Git {
       await this.verifyCurrentBranchIsReleaseBranch(this.options.branch);
     }
 
-    const currentBranch = await Git.getCurrentBranch();
-
-    const defaultBranch = await Git.getDefaultBranch();
-
-    const releaseBranch = this.options.allowAnyBranch
-      ? currentBranch
-      : this.options.branch || defaultBranch;
-
-    this.releaseBranch = releaseBranch;
+    if (this.options.allowAnyBranch) {
+      this.releaseBranch = await Git.getCurrentBranch();
+    } else if (this.options.branch) {
+      this.releaseBranch = this.options.branch;
+    } else {
+      this.releaseBranch = await Git.getDefaultBranch();
+    }
 
     if (this.repoUrl) {
       const registryUrl = await Npm.getRegistryUrl(this.pkg);
@@ -75,7 +73,7 @@ class Git {
 
     await this.verifyWorkingTreeIsClean();
 
-    await this.checkGitBranchExistence(releaseBranch);
+    await this.checkGitBranchExistence(this.releaseBranch);
   }
 
   public getNewTag() {
