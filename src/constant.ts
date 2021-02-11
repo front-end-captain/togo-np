@@ -31,7 +31,7 @@ export const Reminder = {
       "You do not have write permissions required to publish this package.",
     publishFail: (msg: string) =>
       `Error publishing package:\n${msg}\n\nThe project was rolled back to its previous state.`,
-    startRollback: "\nPublish failed. Rolling back to the previous state…",
+    startRollback: "Publish failed. Rolling back to the previous state…",
     rollbackOk: "Successfully rolled back the project to its previous state.",
     rollbackFail: (err: any) =>
       `Couldn't roll back because of the following error:\n${err}.`,

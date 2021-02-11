@@ -10,8 +10,12 @@ import { getPackageJson } from "./share";
 
 import { CliOptions, BasePkgFields, PublishStatus } from "./definitions";
 
-function rollback(pkg: BasePkgFields) {
-  return onetime(async () => {
+export function publish(
+  options: CliOptions,
+  pkg: BasePkgFields,
+  cb: (status: PublishStatus) => void,
+) {
+  const rollback = onetime(async () => {
     info(Reminder.npm.startRollback);
 
     const tagVersionPrefix = await Npm.getTagVersionPrefix();
@@ -33,13 +37,7 @@ function rollback(pkg: BasePkgFields) {
       error(Reminder.npm.rollbackFail(err));
     }
   });
-}
 
-export function publish(
-  options: CliOptions,
-  pkg: BasePkgFields,
-  cb: (status: PublishStatus) => void,
-) {
   let hasPublishErr = false;
   let publishStatus: PublishStatus = "UNKNOWN";
 
@@ -47,7 +45,7 @@ export function publish(
     catchError(async (err) => {
       hasPublishErr = true;
 
-      await rollback(pkg);
+      await rollback();
 
       throw new Error(Reminder.npm.publishFail(err.message));
     }),
