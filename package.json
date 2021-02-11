@@ -1,6 +1,6 @@
 {
   "name": "togo-np",
-  "version": "0.0.13-1",
+  "version": "0.0.13-2",
   "description": "a 'npm publish' cli",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
